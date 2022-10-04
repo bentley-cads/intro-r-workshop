@@ -1,2 +1,2 @@
-# intro-r-workshop
-Files for the center's Introductory R Workshop
+
+This repository is empty but will be filled with content before we deliver the workshop.
