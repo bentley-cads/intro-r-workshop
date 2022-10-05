@@ -1,0 +1,412 @@
+---
+title: "Exploring the Palmer Penguins"
+subtitle: |
+    | Center for Analytics and Data Science
+    | R Review Workshop
+output:
+  html_document:
+    df_print: paged
+---
+
+## Meet the Penguins
+
+![Palmer Penguins](penguins.png)
+Source: Artwork by @allison_horst
+https://allisonhorst.github.io/palmerpenguins
+
+## Set-up the environment and data
+
+Load the `tidyverse` library to work with the data.
+`library()`
+
+```{r,warning=FALSE,message=FALSE}
+library(tidyverse)
+```
+
+Load the Palmer Penguins data set and assign it to a
+variable.
+`library()` and `<-`
+
+```{r}
+library(palmerpenguins)
+dta <- penguins
+```
+
+## What are we working with?
+
+How many observations and how many features (variables)
+do we have in the data set?
+`dim()` or `nrow()` and `ncol()`
+
+```{r}
+dim(dta)
+```
+
+What are the names of the variables in the data set?
+`names()`
+
+```{r}
+names(dta)
+```
+
+Are all the variables in the data set numeric or character?
+The function `str()` will give you the **structure** of the
+data set and a few observations for each variable.
+
+```{r}
+str(dta)
+```
+
+Print out the first few rows of the data set.
+`head()`
+
+```{r}
+head(dta)
+```
+
+Print the last 15 rows of the data set.
+`tail()`
+
+```{r}
+tail(dta, n = 15)
+```
+
+## What kinds of penguins do we have?
+
+How many different species of penguins do we have?
+`unique()` and `$`
+
+```{r}
+unique(dta$species)
+```
+
+How many observations do we have of each type of penguin?
+`table()` or `xtabs()`
+
+```{r}
+table(dta$species)
+```
+
+Another way of computing this is:
+
+```{r}
+xtabs( ~ species, data = dta)
+```
+
+I have heard that some penguins do not like some
+of the islands, but other penguins like all of the
+islands.  Is that true?
+
+Create a table where the rows are the penguin species
+and the columns are the islands.  The entries in the
+table should be the number of penguins.
+
+```{r}
+(tbl <- table(dta$species, dta$island))
+```
+
+Do the sum of all your table entries match the total
+number of observations in your data set?
+
+```{r}
+sum(tbl)
+```
+
+```{r}
+(xtbl <- xtabs( ~ species + island, data = dta))
+```
+
+```{r}
+sum(xtbl)
+```
+
+Are there any missing values in the body mass variable?
+`any()`, `is.na()`
+
+```{r}
+any(is.na(dta$body_mass_g))
+```
+
+Which observations are those?
+`which()`
+
+```{r}
+(idx <- which(is.na(dta$body_mass_g)))
+```
+
+Display those records with missing body mass.
+`[]`
+
+```{r}
+dta[idx,]
+```
+
+Remove the rows of data with a missing weight and 
+store the data in a new variable.
+
+```{r}
+dtb <- dta[-idx,]
+```
+
+## Let's look at penguin weight
+
+Which penguins weigh between 6,000 and 6,500 grams?
+Create an index variable, called `idx`, that is true
+if the weight is in this range and false otherwise.
+How many penguins fall in this weight range?
+
+```{r}
+idx <- dtb$body_mass_g >= 6000 & dtb$body_mass_g <= 6500
+sum(idx)
+```
+
+Display the penguins in this range.
+
+```{r}
+dtb[idx,]
+```
+
+What is the average weight (in kilograms) across all
+the penguins for which we have their weight?
+`mean()`
+
+```{r}
+mean(dtb$body_mass_g)/1000
+```
+
+I have heard that all three types of penguins are
+about the same size.  Is it true that average weight
+for all three penguins is the same?
+`group_by()`, `summarize()`, `%>%`
+
+```{r}
+dtb %>% 
+  group_by(species) %>% 
+  summarise(avg.weight = mean(body_mass_g))
+```
+
+What is the one standard deviation interval around 
+the mean weight for these penguins?
+`group_by()`, `summarize()`, `mean()`, and `sd()`
+
+```{r}
+wt <- dtb %>% 
+  group_by(species) %>% 
+  summarise(avg.weight = mean(body_mass_g),
+            std.dev = sd(body_mass_g))
+wt
+```
+
+```{r}
+wt$lo.weight <- wt$avg.weight - wt$std.dev
+wt$hi.weight <- wt$avg.weight + wt$std.dev
+wt
+```
+
+## Body Mass Index for penguins?
+
+Humans use the body mass index (BMI) to determine if
+someone is under-weight, normal weight, or over-weight.
+Let's invent a penguin body mass index.
+Maybe we can call it PMI for penguin mass index.
+
+Humans use the formula
+$$
+  \text{BMI} = \frac{\text{Weight}}{\text{Height}^2}
+$$
+where weight is in kilograms and height is in meters.
+
+Let's try the following formula for the penguins
+$$
+  \text{PMI} = \frac{\text{Weight}}{(2.3 \times\text{Flipper})^2}
+$$
+where weight is in grams and flipper is the flipper length
+in centimeters. (There are 10 millimeters in each centimeter.)
+
+## Penguin Mass Index
+
+Add a new variable to the data set, say `pmi`, that
+computes the penguin mass index as given by the above
+formula.
+`<-`, `$`, `/`, `*`, `^`
+
+```{r}
+dtb$pmi <- dtb$body_mass_g / (2.3 * dtb$flipper_length_mm/10)^2
+```
+
+Give a summary of the penguin mass index.
+`summary()`
+
+```{r}
+summary(dtb$pmi)
+```
+
+Plot a histogram of the penguin mass index.
+`ggplot()`, `geom_histogram()`, `labs()`
+
+```{r}
+p <- ggplot(data = dtb,
+            mapping = aes(x = pmi))
+p <- p + geom_histogram()
+p <- p + labs(x = "Penguin Mass Index")
+p
+```
+
+## Penguin Bills (not the utility kind)
+
+Is the bill length and depth related to each other?
+
+Create a scatterplot with bill length on the $x$-axis
+and bill depth on the $y$-axis.
+`ggplot()`, `geom_point()`, `labs()`
+
+```{r}
+p <- ggplot(data = dtb,
+            mapping = aes(x = bill_length_mm,
+                          y = bill_depth_mm))
+p <- p + geom_point()
+p <- p + labs(x = "Bill Length (in mm)",
+              y = "Bill Depth (in mm)")
+p
+```
+
+What kind of patterns do you see in the scatterplot?
+
+Can you color the points differently by the penguin's
+species?
+
+```{r}
+p <- ggplot(data = dtb,
+            mapping = aes(x = bill_length_mm,
+                          y = bill_depth_mm,
+                          color = species))
+p <- p + geom_point()
+p <- p + labs(x = "Bill Length (in mm)",
+              y = "Bill Depth (in mm)")
+p
+```
+
+Maybe we should remove the rows where we have 
+missing information. Find out, for each variable
+in the data set, which rows have missing information.
+`lapply()`, `function()`
+
+```{r}
+(miss <- lapply(dta, function(x) which(is.na(x))))
+```
+
+Since rows 4, and 272 are missing the penguin
+measurements, we'll remove them.
+Create a subset without these two rows.
+`c()`, `-`
+
+```{r}
+dtb <- dta[-c(4, 272),]
+```
+
+From the above plot, it looks like as bill length 
+increases, so does bill depth.  Fit a linear
+model for each species separately.
+
+## Linear regressions
+
+Are the slopes of the lines comparable across species?
+`lm()`, `summary()`
+
+```{r}
+lm.a <- lm(bill_depth_mm ~ bill_length_mm,
+           data = dtb,
+           subset = species == "Adelie")
+summary(lm.a)
+```
+
+```{r}
+lm.c <- lm(bill_depth_mm ~ bill_length_mm,
+           data = dtb,
+           subset = species == "Chinstrap")
+summary(lm.c)
+```
+
+```{r}
+lm.g <- lm(bill_depth_mm ~ bill_length_mm,
+           data = dtb,
+           subset = species == "Gentoo")
+summary(lm.g)
+```
+
+Create a plot of bill length by bill depth, colored 
+by species, and superimpose the linear fits.
+`ggplot()`, `geom_point()`, `geom_smooth()`
+
+```{r}
+p <- ggplot(data = dtb,
+            mapping = aes(x = bill_length_mm,
+                          y = bill_depth_mm,
+                          color = species))
+p <- p + geom_point() + geom_smooth(method = "lm",
+                                    se = FALSE)
+p <- p + labs(x = "Bill Length (in mm)",
+              y = "Bill Depth (in mm)")
+p
+```
+
+Looking at the estimated slopes for the lines and
+their standard errors, do you think that all three
+models have essentially the same slope?
+
+We can compute confidence intervals with the
+function `confint()`.
+
+```{r}
+rbind("Adelie" = confint(lm.a)[2,],
+      "Gentoo" = confint(lm.g)[2,],
+      "Chinstrap" = confint(lm.c)[2,])
+```
+
+
+## More involved questions
+
+Human females tend (on average) to be smaller than
+males.  Does the same thing happen for penguins in
+each species?
+
+Since we have lots of rows with missing sex information,
+let's remove them from the data set.
+`na.omit()`
+
+```{r}
+dtc <- na.omit(dtb)
+```
+
+Compute average weight, flipper, bill length and depth, 
+by species and sex.
+`group_by()`, `summarize()`, `mean()`
+
+```{r}
+dtc %>%
+  group_by(species, sex) %>%
+  summarise(avg.weight = mean(body_mass_g),
+            avg.flipper = mean(flipper_length_mm),
+            avg.bill.len = mean(bill_length_mm),
+            avg.bill.dep = mean(bill_depth_mm))
+```
+
+Are the differences significant? Compute standard
+deviations and use them to see if there are big
+differences?
+`group_by()`, `summarize()`, `sd()`
+
+```{r}
+dtc %>%
+  group_by(species, sex) %>%
+  summarise(std.weight = sd(body_mass_g),
+            std.flipper = sd(flipper_length_mm),
+            std.bill.len = sd(bill_length_mm),
+            std.bill.dep = sd(bill_depth_mm))
+```
+
+
+
+
+
+
